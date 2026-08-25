@@ -1,6 +1,6 @@
 pillow
 scipy
-tensorflow
+tensorflow>=2.16.0
 tqdm>=4.41.0,<5
 pip
 pytest
