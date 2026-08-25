@@ -46,4 +46,8 @@ jobs:
 
       - name: Fail workflow when tests fail
         if: steps.tests.outputs.pytest_exit_code != '0'
-        run: exit 1
+        run: |
+          echo "Pytest failed with exit code: ${{ steps.tests.outputs.pytest_exit_code }}"
+          echo "Showing last 200 lines from test_output.txt"
+          tail -n 200 test_output.txt || true
+          exit 1
