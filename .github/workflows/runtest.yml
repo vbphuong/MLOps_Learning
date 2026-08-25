@@ -10,28 +10,40 @@ jobs:
   test_model:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
 
       - uses: iterative/setup-dvc@v2
 
+      - uses: iterative/setup-cml@v2
+
       - name: run unit tests
+        id: tests
         run: |
           pip install -r requirements.txt
-          python -m pytest 2>&1 > test_output.txt
+          set +e
+          python -m pytest 2>&1 | tee test_output.txt
+          pytest_exit_code=${PIPESTATUS[0]}
+          set -e
+          echo "pytest_exit_code=$pytest_exit_code" >> "$GITHUB_OUTPUT"
 
       - name: Create CML report
+        if: always()
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "test output" > report.md
           echo "```" >> report.md
-          cat test_output.txt >> report.md
+          cat test_output.txt >> report.md || echo "No pytest output captured." >> report.md
           echo "```" >> report.md
           echo "" >> report.md
           echo "metrics from training" >> report.md
-          cat metrics.csv >> report.md
+          cat metrics.csv >> report.md || echo "metrics.csv not found" >> report.md
           cml comment create --publish report.md
+
+      - name: Fail workflow when tests fail
+        if: steps.tests.outputs.pytest_exit_code != '0'
+        run: exit 1
