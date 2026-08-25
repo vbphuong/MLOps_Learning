@@ -3,12 +3,27 @@ import unittest
 class TestModel(unittest.TestCase):
     restored_model = None
     base_model = None
-    top_model_complete = "model.keras"
+    top_model_weights_path = "model.weights.h5"
     sample_patch = "samples"
     
     def setUp(self):
-        from tensorflow.keras.models import load_model
-        self.restored_model = load_model(self.top_model_complete)
+        from tensorflow.keras.models import Sequential
+        from tensorflow.keras.layers import Flatten, Dense, Dropout
+
+        # Rebuild architecture to avoid quantization_config deserialization
+        # incompatibility between the Keras version that saved model.keras
+        # and the older Keras running in this Python 3.9 CI environment.
+        model = Sequential([
+            Flatten(input_shape=(4, 4, 512)),
+            Dense(256, activation='relu'),
+            Dropout(0.5),
+            Dense(1, activation='sigmoid'),
+        ])
+        model.compile(optimizer='rmsprop',
+                      loss='binary_crossentropy',
+                      metrics=['accuracy'])
+        model.load_weights(self.top_model_weights_path)
+        self.restored_model = model
         
     def convert_img(self, img):
         import numpy as np
